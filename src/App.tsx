@@ -1,9 +1,8 @@
-import {createSignal, onMount, type Component} from 'solid-js';
+import {createSignal, type Component} from 'solid-js';
 import {createStore} from 'solid-js/store';
-import Fa from 'solid-fa';
-import {faPlay, faStop} from '@fortawesome/free-solid-svg-icons';
 
 import ThemeToggle from './ThemeToggle';
+import {frequencyKey, keyFrequency, scientificPitchName} from './keyboard';
 
 type AudioEnvironment = {
   audioCtx: AudioContext;
@@ -40,7 +39,11 @@ const initAudioEnv = () => {
 };
 
 const App: Component = () => {
-  const [frequency, setFrequency] = createSignal<number | null>(440);
+  // `n` as in https://en.wikipedia.org/wiki/Piano_key_frequencies#
+  const [keyNumber] = createSignal<number | null>(49);
+  const [frequency, setFrequency] = createSignal<number | null>(
+    keyFrequency(keyNumber()),
+  );
   const [playing, setPlaying] = createSignal<boolean>(false);
 
   const [audioEnv, setAudioEnv] = createStore<{e: AudioEnvironment | null}>({
@@ -74,7 +77,7 @@ const App: Component = () => {
     const value = inputValue == null ? null : parseFloat(inputValue);
     setFrequency(value);
 
-    let env = audioEnv.e;
+    const env = audioEnv.e;
     if (!playing() || env == null) {
       return;
     }
@@ -84,6 +87,17 @@ const App: Component = () => {
     } else {
       env.oscillator.frequency.value = value;
     }
+  };
+
+  const scientificPitchLabel = (frequency: number) => {
+    const pitch = scientificPitchName(frequencyKey(frequency));
+    return (
+      <>
+        {pitch[0]}
+        {pitch[1] !== '' ? '♯' : ''}
+        <sub>{pitch[2]}</sub>
+      </>
+    );
   };
 
   return (
@@ -112,6 +126,12 @@ const App: Component = () => {
               value={frequency()}
               onInput={(e) => handleFrequencyInput(e)}
             />
+            <div class="label">
+              <span class="label-text">{frequencyKey(frequency())}</span>
+              <span class="label-text-alt">
+                {scientificPitchLabel(frequency())}
+              </span>
+            </div>
           </label>
           <div class="form-control">
             <label class="label cursor-pointer">
