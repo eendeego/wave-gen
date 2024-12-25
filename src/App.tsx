@@ -1,8 +1,10 @@
-import type {Component} from 'solid-js';
+import {createSignal, type Component} from 'solid-js';
 
 import ThemeToggle from './ThemeToggle';
 
 const App: Component = () => {
+  const [frequency, setFrequency] = createSignal<number | null>(440);
+
   return (
     <>
       <div class="navbar bg-base-100">
@@ -13,17 +15,26 @@ const App: Component = () => {
           <ThemeToggle />
         </div>
       </div>
-      <div class="hero bg-base-200 h-96">
-        <div class="hero-content text-center">
-          <div class="max-w-md">
-            <h1 class="text-5xl font-bold">Hello there</h1>
-            <p class="py-6">
-              Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda
-              excepturi exercitationem quasi. In deleniti eaque aut repudiandae
-              et a id nisi.
-            </p>
-            <button class="btn btn-primary">Get Started</button>
-          </div>
+      <div class="container mx-auto card card-compact bg-base-100 w-3/4 shadow-xl">
+        <div class="card-body">
+          <label class="form-control w-full max-w-xs">
+            <div class="label">
+              <span class="label-text">Pitch</span>
+              <span class="label-text-alt">Hz</span>
+            </div>
+            <input
+              type="number"
+              name="pitch"
+              id="pitch"
+              placeholder="Type here"
+              class="input input-bordered w-full max-w-xs"
+              value={frequency()}
+              onInput={(e) => {
+                const v = e.currentTarget.value;
+                setFrequency(v == null ? null : parseFloat(v));
+              }}
+            />
+          </label>
         </div>
       </div>
     </>
