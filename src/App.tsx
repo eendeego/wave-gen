@@ -1,8 +1,8 @@
-import {createSignal, type Component} from 'solid-js';
+import {createEffect, createSignal, type Component} from 'solid-js';
 import {createStore} from 'solid-js/store';
-
+import {frequencyKey, keyFrequency, scientificPitchName} from './pianoKeyboard';
 import ThemeToggle from './ThemeToggle';
-import {frequencyKey, keyFrequency, scientificPitchName} from './keyboard';
+import Keyboard from './Keyboard';
 
 type AudioEnvironment = {
   audioCtx: AudioContext;
@@ -40,7 +40,7 @@ const initAudioEnv = () => {
 
 const App: Component = () => {
   // `n` as in https://en.wikipedia.org/wiki/Piano_key_frequencies#
-  const [keyNumber] = createSignal<number | null>(49);
+  const [keyNumber, setKeyNumber] = createSignal<number | null>(49);
   const [frequency, setFrequency] = createSignal<number | null>(
     keyFrequency(keyNumber()),
   );
@@ -67,6 +67,19 @@ const App: Component = () => {
     }
   };
 
+  createEffect(() => {
+    const env = audioEnv.e;
+    if (!playing() || env == null) {
+      return;
+    }
+
+    if (frequency() == null) {
+      env.oscillator.disconnect(env.gainNode);
+    } else {
+      env.oscillator.frequency.value = frequency();
+    }
+  });
+
   const handleFrequencyInput = (
     event: InputEvent & {
       currentTarget: HTMLInputElement;
@@ -76,17 +89,7 @@ const App: Component = () => {
     const inputValue = event.currentTarget.value;
     const value = inputValue == null ? null : parseFloat(inputValue);
     setFrequency(value);
-
-    const env = audioEnv.e;
-    if (!playing() || env == null) {
-      return;
-    }
-
-    if (value == null) {
-      env.oscillator.disconnect(env.gainNode);
-    } else {
-      env.oscillator.frequency.value = value;
-    }
+    setKeyNumber(frequencyKey(value));
   };
 
   const scientificPitchLabel = (frequency: number) => {
@@ -100,6 +103,11 @@ const App: Component = () => {
     );
   };
 
+  const handleKeyNumberChange = (key: number) => {
+    setKeyNumber(key);
+    setFrequency(keyFrequency(key));
+  };
+
   return (
     <>
       <div class="navbar bg-base-100">
@@ -110,7 +118,7 @@ const App: Component = () => {
           <ThemeToggle />
         </div>
       </div>
-      <div class="container mx-auto card card-compact bg-base-100 w-1/4 shadow-xl">
+      <div class="mx-auto card card-compact bg-base-300 w-11/12 shadow-xl">
         <div class="card-body">
           <label class="form-control w-full max-w-xs">
             <div class="label">
@@ -133,6 +141,22 @@ const App: Component = () => {
               </span>
             </div>
           </label>
+          <h3 class="text-base font-medium tracking-tight">
+            Keyboard Frequencies
+          </h3>
+          <p class="text-slate-500 text-sm">
+            Reference:{' '}
+            <a
+              class="text-blue-700"
+              href="https://en.wikipedia.org/wiki/Piano_key_frequencies#"
+            >
+              Wikipedia - Piano key frequencies
+            </a>
+          </p>
+          <Keyboard
+            keyNumber={keyNumber()}
+            onKeyNumberChange={handleKeyNumberChange}
+          />
           <div class="form-control">
             <label class="label cursor-pointer">
               <span class="label-text">Play</span>

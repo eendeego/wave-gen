@@ -8,3 +8,8 @@ export const scientificPitchName = (n: number) => [
   '# #  # #  # '[n % 12].trim(),
   Math.floor((n + 8) / 12),
 ];
+
+export const isAccidental = (keyNum: number) => {
+  const key = (keyNum + 8) % 12;
+  return key === 1 || key === 3 || key === 6 || key === 8 || key === 10;
+};
