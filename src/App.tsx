@@ -1,12 +1,90 @@
-import {createSignal, type Component} from 'solid-js';
+import {createSignal, onMount, type Component} from 'solid-js';
+import {createStore} from 'solid-js/store';
 import Fa from 'solid-fa';
 import {faPlay, faStop} from '@fortawesome/free-solid-svg-icons';
 
 import ThemeToggle from './ThemeToggle';
 
+type AudioEnvironment = {
+  audioCtx: AudioContext;
+  oscillator: OscillatorNode;
+  gainNode: GainNode;
+};
+
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
+
+const initAudioEnv = () => {
+  const AudioContext = window.AudioContext ?? window.webkitAudioContext;
+  const audioCtx = new AudioContext();
+
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  gainNode.gain.value = 0.5;
+
+  oscillator.start(0);
+
+  oscillator.disconnect(gainNode);
+
+  return {
+    audioCtx,
+    oscillator,
+    gainNode,
+  };
+};
+
 const App: Component = () => {
   const [frequency, setFrequency] = createSignal<number | null>(440);
   const [playing, setPlaying] = createSignal<boolean>(false);
+
+  const [audioEnv, setAudioEnv] = createStore<{e: AudioEnvironment | null}>({
+    e: null,
+  });
+
+  const handlePlaying = (playing: boolean) => {
+    setPlaying(playing);
+
+    let env = audioEnv.e;
+    if (env == null) {
+      env = initAudioEnv();
+      setAudioEnv({e: env});
+    }
+
+    if (playing) {
+      env.oscillator.frequency.value = frequency();
+      env.oscillator.connect(env.gainNode);
+    } else {
+      env.oscillator.disconnect(env.gainNode);
+    }
+  };
+
+  const handleFrequencyInput = (
+    event: InputEvent & {
+      currentTarget: HTMLInputElement;
+      target: HTMLInputElement;
+    },
+  ) => {
+    const inputValue = event.currentTarget.value;
+    const value = inputValue == null ? null : parseFloat(inputValue);
+    setFrequency(value);
+
+    let env = audioEnv.e;
+    if (!playing() || env == null) {
+      return;
+    }
+
+    if (value == null) {
+      env.oscillator.disconnect(env.gainNode);
+    } else {
+      env.oscillator.frequency.value = value;
+    }
+  };
 
   return (
     <>
@@ -32,10 +110,7 @@ const App: Component = () => {
               placeholder="Type here"
               class="input input-bordered w-full max-w-xs"
               value={frequency()}
-              onInput={(e) => {
-                const v = e.currentTarget.value;
-                setFrequency(v == null ? null : parseFloat(v));
-              }}
+              onInput={(e) => handleFrequencyInput(e)}
             />
           </label>
           <div class="form-control">
@@ -45,7 +120,7 @@ const App: Component = () => {
                 type="checkbox"
                 class="toggle"
                 checked={playing()}
-                onInput={(e) => setPlaying(e.currentTarget.value === 'on')}
+                onInput={(e) => handlePlaying(e.currentTarget.checked)}
               />
             </label>
           </div>
